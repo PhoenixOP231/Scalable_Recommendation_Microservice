@@ -124,9 +124,22 @@ class QdrantRepository(VectorRepository):
         
         must_conditions = []
         must_not_conditions = []
-        
-        must_not_conditions = []
             
+        if exclude_item_ids:
+            must_not_conditions.append(
+                qmodels.FieldCondition(
+                    key="item_id",
+                    match=qmodels.MatchAny(any=exclude_item_ids)
+                )
+            )
+            
+        if exclude_categories:
+            must_not_conditions.append(
+                qmodels.FieldCondition(
+                    key="category",
+                    match=qmodels.MatchAny(any=exclude_categories)
+                )
+            )
         if min_price is not None or max_price is not None:
             range_kwargs = {}
             if min_price is not None:
