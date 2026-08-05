@@ -70,9 +70,9 @@ class RecommendationService:
             return 0.0
 
     def _normalize_popularity(self, score: float) -> float:
-        # Assuming popularity is 0-100 or something, we use a simple sigmoid-like clamp
-        # Or simply clamp between 0 and 1 if already in 0-1
-        return max(0.0, min(1.0, score / 100.0 if score > 1.0 else score))
+        # TMDB popularity can range from 10 to 5000+. 
+        # We use an exponential decay function so it scales smoothly between 0 and 1.
+        return 1.0 - math.exp(-score / 1000.0)
 
     async def get_recommendations(
         self,
@@ -193,7 +193,7 @@ class RecommendationService:
                 final_score = 0.7 * popularity_score + 0.3 * freshness_score
                 reason = "Popular and fresh item"
             else:
-                final_score = 0.6 * semantic_score + 0.3 * popularity_score + 0.1 * freshness_score
+                final_score = 0.85 * semantic_score + 0.1 * popularity_score + 0.05 * freshness_score
                 reason = "Similar to your interests"
                 
             scored_candidates.append({

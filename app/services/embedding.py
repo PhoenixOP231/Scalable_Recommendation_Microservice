@@ -48,18 +48,37 @@ class OpenAIEmbeddingService(EmbeddingService):
 
 class DemoEmbeddingService(EmbeddingService):
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        # Generate deterministic embeddings using SHA-256
+        # Generate pseudo-semantic embeddings using Random Indexing / Bag-of-Words
         embeddings = []
         dim = self.dimensions
         
         for text in texts:
-            # Seed a random generator with the SHA-256 digest of the text
-            hasher = hashlib.sha256(text.encode("utf-8"))
-            seed = int.from_bytes(hasher.digest()[:4], "little")
+            # Clean and split text into words
+            words = ''.join(c if c.isalnum() else ' ' for c in text.lower()).split()
             
-            rng = np.random.default_rng(seed)
-            # Generate random vector
-            vec = rng.normal(0, 1, dim)
+            vec = np.zeros(dim)
+            valid_words = 0
+            
+            for word in set(words):
+                if len(word) < 3: 
+                    continue # Skip very short words like 'a', 'to'
+                
+                # Seed a random generator with the SHA-256 digest of the word
+                hasher = hashlib.sha256(word.encode("utf-8"))
+                seed = int.from_bytes(hasher.digest()[:4], "little")
+                
+                rng = np.random.default_rng(seed)
+                word_vec = rng.normal(0, 1, dim)
+                vec += word_vec
+                valid_words += 1
+                
+            # If text had no valid words, generate a random vector based on the whole text
+            if valid_words == 0:
+                hasher = hashlib.sha256(text.encode("utf-8"))
+                seed = int.from_bytes(hasher.digest()[:4], "little")
+                rng = np.random.default_rng(seed)
+                vec = rng.normal(0, 1, dim)
+                
             # Normalize to unit length for cosine similarity
             norm = np.linalg.norm(vec)
             if norm == 0:
