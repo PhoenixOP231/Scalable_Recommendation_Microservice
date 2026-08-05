@@ -68,7 +68,8 @@ async def get_demo_catalog(
                 "title": meta.get("title"),
                 "category": meta.get("category"),
                 "price": meta.get("price"),
-                "tags": meta.get("tags")
+                "tags": meta.get("tags"),
+                "image_url": meta.get("image_url")
             })
         return DemoCatalogResponse(items=safe_items)
     except Exception as e:

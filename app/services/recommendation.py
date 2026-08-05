@@ -268,6 +268,7 @@ class RecommendationService:
                     item_id=cand["item"]["item_id"],
                     title=cand["item"]["title"],
                     category=cand["item"]["category"],
+                    image_url=cand["item"].get("image_url"),
                     scores=cand["scores"]
                 )
             )
