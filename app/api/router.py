@@ -142,6 +142,7 @@ async def seed_catalog(
     await cache_repo.increment_catalog_version()
     return {"status": "success", "seeded": 150}
 
+@router.get("/v1/catalog/daily-sync", dependencies=[Depends(verify_cron_secret)])
 @router.post("/v1/catalog/daily-sync", dependencies=[Depends(verify_cron_secret)])
 async def daily_sync_tmdb(
     vector_repo: VectorRepository = Depends(get_vector_repo),
