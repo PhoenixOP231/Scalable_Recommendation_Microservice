@@ -56,10 +56,20 @@ class QdrantRepository(VectorRepository):
     async def _ensure_collection(self) -> None:
         try:
             if not await self.client.collection_exists(self.collection_name):
-                from qdrant_client.http.models import VectorParams, Distance
+                from qdrant_client.http.models import VectorParams, Distance, PayloadSchemaType
                 await self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+                )
+                await self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name="item_id",
+                    field_schema=PayloadSchemaType.KEYWORD
+                )
+                await self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name="category",
+                    field_schema=PayloadSchemaType.KEYWORD
                 )
         except Exception as e:
             logger.warning(f"Could not check or create collection (it might already exist): {e}")
@@ -70,10 +80,20 @@ class QdrantRepository(VectorRepository):
             if await self.client.collection_exists(self.collection_name):
                 await self.client.delete_collection(self.collection_name)
                 
-            from qdrant_client.http.models import VectorParams, Distance
+            from qdrant_client.http.models import VectorParams, Distance, PayloadSchemaType
             await self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+            )
+            await self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="item_id",
+                field_schema=PayloadSchemaType.KEYWORD
+            )
+            await self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="category",
+                field_schema=PayloadSchemaType.KEYWORD
             )
         except Exception as e:
             logger.error(f"Failed to clear collection: {e}")
