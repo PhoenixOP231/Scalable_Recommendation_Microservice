@@ -32,10 +32,9 @@ def get_embedding_service() -> EmbeddingService:
 
 def get_recommendation_service(
     vector_repo: VectorRepository = Depends(get_vector_repo),
-    cache_repo: CacheRepository = Depends(get_cache_repo),
-    embedding_service: EmbeddingService = Depends(get_embedding_service)
+    cache_repo: CacheRepository = Depends(get_cache_repo)
 ) -> RecommendationService:
-    return RecommendationService(vector_repo, cache_repo, embedding_service)
+    return RecommendationService(vector_repo, cache_repo)
 
 @lru_cache()
 def get_tmdb_service() -> TMDBService:
