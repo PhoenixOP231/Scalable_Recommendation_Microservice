@@ -74,7 +74,11 @@ class RecommendationService:
         # Or simply clamp between 0 and 1 if already in 0-1
         return max(0.0, min(1.0, score / 100.0 if score > 1.0 else score))
 
-    async def get_recommendations(self, request: RecommendationRequest) -> RecommendationResponse:
+    async def get_recommendations(
+        self,
+        request: RecommendationRequest,
+        demo_history: Optional[List[Dict[str, Any]]] = None
+    ) -> RecommendationResponse:
         start_time = time.time()
         
         # 1. Fetch versions
@@ -83,7 +87,11 @@ class RecommendationService:
         # For user version, we could do a dummy call if we don't store it explicitly,
         # but let's just get the interactions and hash them as a proxy for version if not using strict versioning,
         # or we just get the interactions directly. 
-        interactions = await self.cache_repo.get_user_interactions(request.user_id)
+        if demo_history is not None:
+            interactions = demo_history
+        else:
+            interactions = await self.cache_repo.get_user_interactions(request.user_id)
+        
         user_version = len(interactions) # Simple proxy for user version based on history length if counter missing
         
         # 2. Check Cache

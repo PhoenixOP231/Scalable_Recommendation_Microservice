@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
     LOG_LEVEL: str = "INFO"
     ALLOW_SEED_ENDPOINT: bool = False
+    PUBLIC_DEMO_ENABLED: bool = False
+    CRON_SECRET: str = ""
+
+    # External APIs
+    TMDB_API_KEY: str = ""
 
     # OpenAI
     OPENAI_API_KEY: str = ""

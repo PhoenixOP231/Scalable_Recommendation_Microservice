@@ -35,17 +35,51 @@ class VectorRepository(ABC):
     async def get_items_vectors(self, item_ids: List[str]) -> Dict[str, List[float]]:
         pass
 
+    @abstractmethod
+    async def get_catalog(self, limit: int = 50) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def clear_collection(self) -> None:
+        pass
+
 class QdrantRepository(VectorRepository):
     def __init__(self):
         # Async client with configured timeout
         self.client = AsyncQdrantClient(
-            url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY,
+            url=settings.QDRANT_URL.strip() if settings.QDRANT_URL else None,
+            api_key=settings.QDRANT_API_KEY.strip() if settings.QDRANT_API_KEY else None,
             timeout=settings.QDRANT_TIMEOUT_SECONDS
         )
         self.collection_name = settings.QDRANT_COLLECTION_NAME
 
     async def upsert_items(self, items: List[Item], embeddings: List[List[float]]) -> None:
+        try:
+            if not await self.client.collection_exists(self.collection_name):
+                from qdrant_client.http.models import VectorParams, Distance
+                await self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+        except Exception as e:
+            logger.warning(f"Could not check or create collection (it might already exist): {e}")
+
+    async def clear_collection(self) -> None:
+        """Deletes and recreates the collection to wipe all points."""
+        try:
+            if await self.client.collection_exists(self.collection_name):
+                await self.client.delete_collection(self.collection_name)
+                
+            from qdrant_client.http.models import VectorParams, Distance
+            await self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+            )
+        except Exception as e:
+            logger.error(f"Failed to clear collection: {e}")
+            raise
+
+    async def upsert_items(self, items: List[Item], embeddings: List[List[float]]) -> None:
+        await self._ensure_collection()
         points = []
         for item, embedding in zip(items, embeddings):
             payload = {
@@ -56,7 +90,8 @@ class QdrantRepository(VectorRepository):
                 "is_active": item.is_active,
                 "popularity_score": item.popularity_score,
                 "created_at": item.created_at.isoformat(),
-                "tags": item.tags
+                "tags": item.tags,
+                "image_url": item.image_url
             }
             points.append(
                 qmodels.PointStruct(
@@ -86,33 +121,10 @@ class QdrantRepository(VectorRepository):
         max_price: Optional[float] = None
     ) -> List[Dict[str, Any]]:
         
-        must_conditions = [
-            qmodels.FieldCondition(
-                key="is_active",
-                match=qmodels.MatchValue(value=True)
-            )
-        ]
+        must_conditions = []
         must_not_conditions = []
         
-        if exclude_item_ids:
-            # Cap the exclusion list to avoid massive payloads (e.g. max 1000)
-            capped_exclude = exclude_item_ids[:1000]
-            if len(exclude_item_ids) > 1000:
-                logger.warning("Exclude item ids capped at 1000 for Qdrant query")
-            must_not_conditions.append(
-                qmodels.FieldCondition(
-                    key="item_id",
-                    match=qmodels.MatchAny(any=capped_exclude)
-                )
-            )
-            
-        if exclude_categories:
-            must_not_conditions.append(
-                qmodels.FieldCondition(
-                    key="category",
-                    match=qmodels.MatchAny(any=exclude_categories)
-                )
-            )
+        must_not_conditions = []
             
         if min_price is not None or max_price is not None:
             range_kwargs = {}
@@ -134,16 +146,16 @@ class QdrantRepository(VectorRepository):
         )
         
         try:
-            search_result = await self.client.search(
+            search_result = await self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=filter_query,
                 limit=limit,
                 with_payload=True
             )
             
             results = []
-            for hit in search_result:
+            for hit in search_result.points:
                 res = hit.payload.copy()
                 res["vector_score"] = hit.score
                 results.append(res)
@@ -175,9 +187,26 @@ class QdrantRepository(VectorRepository):
             logger.error(f"Qdrant retrieve failed: {e}")
             raise
 
+    async def get_catalog(self, limit: int = 50) -> List[Dict[str, Any]]:
+        results, _ = await self.client.scroll(
+            collection_name=self.collection_name,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False
+        )
+        return [
+            {
+                "id": hit.id,
+                "metadata": hit.payload
+            }
+            for hit in results
+        ]
 
 class InMemoryVectorRepository(VectorRepository):
     def __init__(self):
+        self.points = {}
+
+    async def clear_collection(self) -> None:
         self.points = {}
 
     def _cosine_sim(self, v1: List[float], v2: List[float]) -> float:
@@ -200,6 +229,7 @@ class InMemoryVectorRepository(VectorRepository):
                 "popularity_score": item.popularity_score,
                 "created_at": item.created_at.isoformat(),
                 "tags": item.tags,
+                "image_url": item.image_url,
                 "vector": emb
             }
 
@@ -244,3 +274,12 @@ class InMemoryVectorRepository(VectorRepository):
             if i in self.points:
                 res[i] = self.points[i]["vector"]
         return res
+
+    async def get_catalog(self, limit: int = 50) -> List[Dict[str, Any]]:
+        results = []
+        for p_id, data in list(self.points.items())[:limit]:
+            results.append({
+                "id": generate_point_id(p_id),
+                "metadata": data
+            })
+        return results

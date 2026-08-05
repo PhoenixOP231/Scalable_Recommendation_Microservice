@@ -7,20 +7,23 @@ from pydantic import BaseModel
 from app.schemas.item import Item, ItemCreate
 from app.schemas.interaction import InteractionCreate
 from app.schemas.recommendation import RecommendationRequest, RecommendationResponse
-from app.core.security import verify_api_key
+from app.core.security import verify_api_key, verify_cron_secret
 from app.core.dependencies import (
     get_vector_repo, get_cache_repo, get_embedding_service, 
-    get_recommendation_service, require_production_dependencies
+    get_recommendation_service, get_tmdb_service, require_production_dependencies
 )
 from app.repositories.vector import VectorRepository
 from app.repositories.cache import CacheRepository
 from app.services.embedding import EmbeddingService
 from app.services.recommendation import RecommendationService
+from app.services.tmdb import TMDBService
+from app.api import demo
 from app.core.settings import settings
 import logging
 
 logger = logging.getLogger("app")
 router = APIRouter()
+router.include_router(demo.router)
 
 @router.get("/health", status_code=200)
 async def health_check():
@@ -100,20 +103,28 @@ async def seed_catalog(
     cache_repo: CacheRepository = Depends(get_cache_repo),
     embedding_service: EmbeddingService = Depends(get_embedding_service)
 ):
-    if not settings.DEMO_MODE and not settings.ALLOW_SEED_ENDPOINT:
-        raise HTTPException(status_code=403, detail="Seed endpoint is disabled in production")
+    # Endpoint is protected by ADMIN_API_KEY
         
-    # Generate 150 dummy items
+    # Generate 150 movie items
     items = []
-    categories = ["electronics", "clothing", "books", "home"]
+    genres = ["Action", "Sci-Fi", "Drama", "Comedy", "Thriller", "Horror", "Romance", "Documentary"]
+    adjectives = ["Dark", "Lost", "Hidden", "Final", "First", "Eternal", "Neon", "Crimson", "Silent", "Iron", "Quantum", "Savage"]
+    nouns = ["City", "Knight", "Planet", "Dream", "Star", "Shadow", "Hero", "Mission", "Dawn", "Legacy", "Code", "Echo"]
+    
     for i in range(1, 151):
+        adj = adjectives[i % len(adjectives)]
+        noun = nouns[(i * 3) % len(nouns)]
+        suffix = f" Part {1 + (i % 3)}" if i % 4 == 0 else ""
+        
+        movie_title = f"The {adj} {noun}{suffix}"
+        
         items.append(ItemCreate(
-            id=f"item_{i}",
-            title=f"Sample Item {i}",
-            description=f"A wonderful sample item {i} for testing.",
-            category=categories[i % 4],
-            tags=[f"tag_{i%10}"],
-            price=10.0 + (i % 50),
+            id=f"movie_{i}",
+            title=movie_title,
+            description=f"A critically acclaimed {genres[i % len(genres)]} film.",
+            category=genres[i % len(genres)],
+            tags=[f"director_{i%10}", f"year_{2000 + (i%24)}"],
+            price=0.0,
             popularity_score=float(i % 100),
             created_at=datetime.now(timezone.utc),
             is_active=True
@@ -130,6 +141,39 @@ async def seed_catalog(
         
     await cache_repo.increment_catalog_version()
     return {"status": "success", "seeded": 150}
+
+@router.post("/v1/catalog/daily-sync", dependencies=[Depends(verify_cron_secret)])
+async def daily_sync_tmdb(
+    vector_repo: VectorRepository = Depends(get_vector_repo),
+    cache_repo: CacheRepository = Depends(get_cache_repo),
+    embedding_service: EmbeddingService = Depends(get_embedding_service),
+    tmdb_service: TMDBService = Depends(get_tmdb_service)
+):
+    """Daily cron job to fetch popular TMDB movies, clear the DB, and populate."""
+    try:
+        # 1. Fetch real movies (top 8 pages = ~160 movies)
+        items = await tmdb_service.fetch_popular_movies(pages=8)
+        
+        # 2. Re-create / clear the vector index
+        await vector_repo.clear_collection()
+        
+        # 3. Batch insert new items
+        chunk_size = 50
+        for i in range(0, len(items), chunk_size):
+            chunk = items[i:i+chunk_size]
+            texts = [f"{item.title} {item.description} {item.category} {' '.join(item.tags)}" for item in chunk]
+            embeddings = await embedding_service.get_embeddings(texts)
+            item_models = [Item(**item.model_dump()) for item in chunk]
+            await vector_repo.upsert_items(item_models, embeddings)
+            
+        # 4. Invalidate cache
+        await cache_repo.increment_catalog_version()
+        
+        logger.info(f"Daily TMDB sync completed successfully. Synced {len(items)} items.")
+        return {"status": "success", "synced_items": len(items)}
+    except Exception as e:
+        logger.error(f"Daily sync failed: {e}")
+        raise HTTPException(status_code=500, detail="Daily sync failed")
 
 @router.get("/v1/metrics", dependencies=[Depends(verify_api_key)])
 async def get_metrics():

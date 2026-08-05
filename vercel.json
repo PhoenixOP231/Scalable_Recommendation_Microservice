@@ -15,5 +15,11 @@
             "src": "/(.*)",
             "dest": "api/index.py"
         }
+    ],
+    "crons": [
+        {
+            "path": "/v1/catalog/daily-sync",
+            "schedule": "0 0 * * *"
+        }
     ]
 }

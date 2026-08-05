@@ -37,6 +37,11 @@ class OpenAIEmbeddingService(EmbeddingService):
             )
             return [data.embedding for data in response.data]
         except Exception as e:
+            if "insufficient_quota" in str(e) or "429" in str(e):
+                logger.warning(f"OpenAI quota exceeded. Falling back to Demo embeddings: {e}")
+                demo_service = DemoEmbeddingService()
+                return await demo_service.get_embeddings(texts)
+                
             logger.error(f"OpenAI embedding failed: {e}")
             raise
 

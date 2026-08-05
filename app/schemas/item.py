@@ -8,6 +8,7 @@ class ItemBase(BaseModel):
     description: str = ""
     category: str = ""
     tags: List[str] = []
+    image_url: Optional[str] = None
     price: float = 0.0
     popularity_score: float = 0.0
     created_at: datetime

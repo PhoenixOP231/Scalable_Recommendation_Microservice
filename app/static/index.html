@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalable Recommendation Demo</title>
+    <meta name="description" content="A demonstration of real-time scalable vector recommendations">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header" role="banner">
+        <div class="container header-container">
+            <div>
+                <h1>VectorCinema</h1>
+                <p>Personalized Movie Recommendations</p>
+            </div>
+            <div class="header-actions">
+                <button id="reset-demo-btn" class="btn btn-secondary" aria-label="Reset demo session">Reset Session</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-content" role="main">
+        <!-- Aria Live Region for Screen Readers -->
+        <div id="status-message" class="sr-only" aria-live="polite"></div>
+
+        <!-- Error State -->
+        <section id="error-state" class="error-state hidden" aria-labelledby="error-heading">
+            <h2 id="error-heading">Service Unavailable</h2>
+            <p id="error-message">The demo API is currently unreachable. Please try again later.</p>
+            <button id="retry-btn" class="btn btn-primary">Retry Connection</button>
+        </section>
+
+        <!-- Dynamic Recommendations Section -->
+        <section id="recommendations-section" aria-labelledby="rec-heading">
+            <h2 id="rec-heading" class="section-title">
+                Recommended For You
+                <span id="rec-loading" class="loading-spinner hidden" aria-hidden="true"></span>
+            </h2>
+            <div id="recommendations-grid" class="item-grid" role="list">
+                <!-- Skeletons injected via JS initially -->
+            </div>
+            <div id="recommendations-empty" class="empty-state hidden">
+                <p>Interact with items below to see personalized recommendations!</p>
+            </div>
+        </section>
+
+        <hr class="section-divider" aria-hidden="true">
+
+        <!-- Catalog Section -->
+        <section id="catalog-section" aria-labelledby="catalog-heading">
+            <h2 id="catalog-heading" class="section-title">Complete Catalog</h2>
+            <div id="catalog-grid" class="item-grid" role="list">
+                <!-- Skeletons injected via JS initially -->
+            </div>
+            <div id="catalog-empty" class="empty-state hidden">
+                <p>No catalog items found.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer" role="contentinfo">
+        <div class="container">
+            <p>Built with FastAPI, Qdrant, Upstash, and Vanilla JS.</p>
+        </div>
+    </footer>
+
+    <div id="toast-container" aria-live="polite"></div>
+    <script type="module" src="/static/app.js"></script>
+</body>
+</html>

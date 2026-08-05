@@ -26,6 +26,7 @@ class RecommendedItem(BaseModel):
     item_id: str
     title: str
     category: str
+    image_url: Optional[str] = None
     scores: ExplainableScore
 
 class RecommendationResponse(BaseModel):

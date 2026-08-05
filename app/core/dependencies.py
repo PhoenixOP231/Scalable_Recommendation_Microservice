@@ -1,9 +1,11 @@
 from fastapi import Depends, HTTPException, status
+from functools import lru_cache
 from app.core.settings import settings
 from app.repositories.vector import VectorRepository, QdrantRepository, InMemoryVectorRepository
 from app.repositories.cache import CacheRepository, UpstashRedisRepository, InMemoryCache
 from app.services.embedding import EmbeddingService, OpenAIEmbeddingService, DemoEmbeddingService
 from app.services.recommendation import RecommendationService
+from app.services.tmdb import TMDBService
 import logging
 
 logger = logging.getLogger("app")
@@ -12,6 +14,7 @@ logger = logging.getLogger("app")
 _in_memory_vector = InMemoryVectorRepository()
 _in_memory_cache = InMemoryCache()
 
+@lru_cache()
 def get_vector_repo() -> VectorRepository:
     if settings.DEMO_MODE:
         return _in_memory_vector
@@ -29,9 +32,14 @@ def get_embedding_service() -> EmbeddingService:
 
 def get_recommendation_service(
     vector_repo: VectorRepository = Depends(get_vector_repo),
-    cache_repo: CacheRepository = Depends(get_cache_repo)
+    cache_repo: CacheRepository = Depends(get_cache_repo),
+    embedding_service: EmbeddingService = Depends(get_embedding_service)
 ) -> RecommendationService:
-    return RecommendationService(vector_repo, cache_repo)
+    return RecommendationService(vector_repo, cache_repo, embedding_service)
+
+@lru_cache()
+def get_tmdb_service() -> TMDBService:
+    return TMDBService()
 
 def require_production_dependencies():
     """Raises 503 if we are not in DEMO_MODE but missing critical prod dependencies"""
