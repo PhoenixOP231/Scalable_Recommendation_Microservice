@@ -30,18 +30,23 @@ async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
         
     return "admin"
 
-from fastapi import Header
+from fastapi import Header, Query
 
-async def verify_cron_secret(authorization: str = Header(None)) -> str:
-    """Verify the request comes from Vercel Cron."""
+async def verify_cron_secret(
+    authorization: str = Header(None),
+    secret: str = Query(None)
+) -> str:
+    """Verify the request comes from Vercel Cron or a manual trigger."""
     if not settings.CRON_SECRET:
         raise HTTPException(status_code=500, detail="CRON_SECRET not configured")
         
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    elif secret:
+        token = secret
         
-    token = authorization.split(" ")[1]
-    if token != settings.CRON_SECRET:
+    if not token or token != settings.CRON_SECRET:
         raise HTTPException(status_code=401, detail="Invalid CRON_SECRET")
         
     return "cron"
