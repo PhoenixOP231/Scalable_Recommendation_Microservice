@@ -152,20 +152,23 @@ async def daily_sync_tmdb(
 ):
     """Daily cron job to fetch popular TMDB movies, clear the DB, and populate."""
     try:
-        # 1. Fetch real movies (top 2 pages = 40 movies)
-        items = await tmdb_service.fetch_popular_movies(pages=2)
+        import asyncio
+        # 1. Fetch real movies (top 10 pages = 200 movies)
+        items = await tmdb_service.fetch_popular_movies(pages=10)
         
         # 2. Re-create / clear the vector index
         await vector_repo.clear_collection()
         
-        # 3. Batch insert new items
-        chunk_size = 40
-        for i in range(0, len(items), chunk_size):
-            chunk = items[i:i+chunk_size]
+        # 3. Batch insert new items concurrently to avoid 10s Vercel timeout
+        chunk_size = 50
+        async def process_chunk(chunk):
             texts = [f"{item.title} {item.description} {item.category} {' '.join(item.tags)}" for item in chunk]
             embeddings = await embedding_service.get_embeddings(texts)
             item_models = [Item(**item.model_dump()) for item in chunk]
             await vector_repo.upsert_items(item_models, embeddings)
+            
+        chunks = [items[i:i+chunk_size] for i in range(0, len(items), chunk_size)]
+        await asyncio.gather(*(process_chunk(chunk) for chunk in chunks))
             
         # 4. Invalidate cache
         await cache_repo.increment_catalog_version()
