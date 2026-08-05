@@ -84,7 +84,7 @@ const createItemCard = (item, isRecommendation = false) => {
         </div>
         <div class="interaction-actions">
             <button class="btn btn-secondary action-view" aria-label="View Details for ${item.title}">Details</button>
-            <button class="btn btn-primary action-buy" aria-label="Mark ${item.title} as Watched">Watched</button>
+            ${!isRecommendation ? `<button class="btn btn-primary action-buy" aria-label="Mark ${item.title} as Watched">Watched</button>` : ''}
         </div>
     `;
 
@@ -97,13 +97,15 @@ const createItemCard = (item, isRecommendation = false) => {
         window.showDetailsView(item);
     });
     
-    buyBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Optional: you can change the button text to show it was clicked
-        buyBtn.textContent = 'Watched ✓';
-        buyBtn.style.opacity = '0.7';
-        handleInteraction(item.item_id, 'purchase');
-    });
+    if (buyBtn) {
+        buyBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Optional: you can change the button text to show it was clicked
+            buyBtn.textContent = 'Watched ✓';
+            buyBtn.style.opacity = '0.7';
+            handleInteraction(item.item_id, 'purchase');
+        });
+    }
 
     return card;
 };
