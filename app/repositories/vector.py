@@ -53,13 +53,14 @@ class QdrantRepository(VectorRepository):
         )
         self.collection_name = settings.QDRANT_COLLECTION_NAME
 
-    async def upsert_items(self, items: List[Item], embeddings: List[List[float]]) -> None:
+    async def _ensure_collection(self) -> None:
         try:
             if not await self.client.collection_exists(self.collection_name):
                 from qdrant_client.http.models import VectorParams, Distance
                 await self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+                )
         except Exception as e:
             logger.warning(f"Could not check or create collection (it might already exist): {e}")
 
