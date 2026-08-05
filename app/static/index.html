@@ -3,73 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scalable Recommendation Demo</title>
-    <meta name="description" content="A demonstration of real-time scalable vector recommendations">
+    <title>CineSphere - Premium Movie Recommendations</title>
+    <meta name="description" content="A modern, spacious movie recommendation platform.">
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Navigation Bar -->
     <header class="app-header" role="banner">
         <div class="container header-container">
-            <div>
-                <h1>VectorCinema</h1>
-                <p>Personalized Movie Recommendations</p>
+            <div class="logo-section">
+                <h1><span>Cine</span>Sphere</h1>
             </div>
+            <ul class="nav-links">
+                <li><a href="#" onclick="showMainView()">Home</a></li>
+                <li><a href="#catalog-section">Movies</a></li>
+                <li><a href="#genres-section">Genres</a></li>
+                <li><a href="#about-section">About</a></li>
+            </ul>
             <div class="header-actions">
+                <div class="search-bar">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="search-input" class="search-input" placeholder="Search movies...">
+                </div>
                 <button id="reset-demo-btn" class="btn btn-secondary" aria-label="Reset demo session">Reset Session</button>
             </div>
         </div>
     </header>
 
-    <main class="container main-content" role="main">
-        <!-- Aria Live Region for Screen Readers -->
-        <div id="status-message" class="sr-only" aria-live="polite"></div>
-
-        <!-- Error State -->
-        <section id="error-state" class="error-state hidden" aria-labelledby="error-heading">
-            <h2 id="error-heading">Service Unavailable</h2>
-            <p id="error-message">The demo API is currently unreachable. Please try again later.</p>
-            <button id="retry-btn" class="btn btn-primary">Retry Connection</button>
-        </section>
-
-        <!-- Dynamic Recommendations Section -->
-        <section id="recommendations-section" aria-labelledby="rec-heading">
-            <h2 id="rec-heading" class="section-title">
-                Recommended For You
-                <span id="rec-loading" class="loading-spinner hidden" aria-hidden="true"></span>
-            </h2>
-            <div id="recommendations-grid" class="item-grid" role="list">
-                <!-- Skeletons injected via JS initially -->
-            </div>
-            <div id="recommendations-empty" class="empty-state hidden">
-                <p>Interact with items below to see personalized recommendations!</p>
+    <!-- Main Dashboard View -->
+    <div id="main-view">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <img src="https://image.tmdb.org/t/p/original/8rpDcsfLJypbO6vtec8Oob3x6j.jpg" alt="Cinematic Hero" class="hero-bg">
+            <div class="hero-overlay"></div>
+            <div class="container hero-content">
+                <h2>Discover Your Next<br>Favorite Movie</h2>
+                <p>Explore our premium library of thousands of movies with personalized recommendations tailored just for you.</p>
+                <div class="hero-buttons">
+                    <a href="#recommendations-section" class="btn btn-primary">Recommended For You</a>
+                    <a href="#catalog-section" class="btn btn-white">Explore Catalog</a>
+                </div>
             </div>
         </section>
 
-        <hr class="section-divider" aria-hidden="true">
+        <main class="container main-content" role="main">
+            <!-- Aria Live Region -->
+            <div id="status-message" class="sr-only" aria-live="polite"></div>
 
-        <!-- Catalog Section -->
-        <section id="catalog-section" aria-labelledby="catalog-heading">
-            <h2 id="catalog-heading" class="section-title">Complete Catalog</h2>
-            <div id="catalog-grid" class="item-grid" role="list">
-                <!-- Skeletons injected via JS initially -->
-            </div>
-            <div id="catalog-pagination" class="pagination hidden" style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
-                <button id="prev-page-btn" class="btn btn-secondary">Previous</button>
-                <span id="page-indicator" style="font-weight: 500;">Page 1</span>
-                <button id="next-page-btn" class="btn btn-secondary">Next</button>
-            </div>
-            <div id="catalog-empty" class="empty-state hidden">
-                <p>No catalog items found.</p>
-            </div>
-        </section>
-    </main>
+            <!-- Error State -->
+            <section id="error-state" class="error-state hidden" aria-labelledby="error-heading">
+                <h2 id="error-heading">Service Unavailable</h2>
+                <p id="error-message">The demo API is currently unreachable. Please try again later.</p>
+                <button id="retry-btn" class="btn btn-primary">Retry Connection</button>
+            </section>
 
+            <!-- Dynamic Recommendations Section -->
+            <section id="recommendations-section" aria-labelledby="rec-heading">
+                <h2 id="rec-heading" class="section-title">
+                    Recommended For You
+                    <span id="rec-loading" class="loading-spinner hidden" aria-hidden="true"></span>
+                </h2>
+                <div id="recommendations-grid" class="item-grid" role="list">
+                    <!-- Skeletons injected via JS initially -->
+                </div>
+                <div id="recommendations-empty" class="empty-state hidden">
+                    <p>Mark some movies as "Watched" below to get personalized recommendations!</p>
+                </div>
+            </section>
+
+            <hr class="section-divider" aria-hidden="true">
+
+            <!-- Popular Genres (Static Mockup) -->
+            <section id="genres-section">
+                <h2 class="section-title">Popular Genres</h2>
+                <div class="genres-grid">
+                    <div class="genre-card">Action</div>
+                    <div class="genre-card">Sci-Fi</div>
+                    <div class="genre-card">Drama</div>
+                    <div class="genre-card">Comedy</div>
+                    <div class="genre-card">Horror</div>
+                    <div class="genre-card">Thriller</div>
+                </div>
+            </section>
+
+            <!-- Complete Catalog Section -->
+            <section id="catalog-section" aria-labelledby="catalog-heading">
+                <h2 id="catalog-heading" class="section-title">Complete Catalog</h2>
+                <div id="catalog-grid" class="item-grid" role="list">
+                    <!-- Skeletons injected via JS initially -->
+                </div>
+                
+                <div id="catalog-pagination" class="pagination hidden" style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 3rem;">
+                    <button id="prev-page-btn" class="btn btn-secondary">Previous</button>
+                    <span id="page-indicator" style="font-weight: 500;">Page 1</span>
+                    <button id="next-page-btn" class="btn btn-secondary">Next</button>
+                </div>
+                <div id="catalog-empty" class="empty-state hidden">
+                    <p>No catalog items found.</p>
+                </div>
+            </section>
+
+            <hr class="section-divider" aria-hidden="true">
+
+            <!-- Why Choose Us -->
+            <section id="about-section">
+                <h2 class="section-title">Why Choose CineSphere</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">✨</div>
+                        <h3>Personalized Recommendations</h3>
+                        <p>Our advanced AI engine learns what you love to suggest the perfect movie for your next movie night.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎬</div>
+                        <h3>Huge Movie Library</h3>
+                        <p>Explore thousands of premium titles across every genre, from the latest blockbusters to hidden indie gems.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🚀</div>
+                        <h3>Fast & Seamless</h3>
+                        <p>Enjoy a lightning-fast browsing experience with no lag, thanks to our cutting-edge scalable infrastructure.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Details View (Hidden by Default) -->
+    <div id="details-view" class="container hidden details-view">
+        <button class="btn btn-secondary back-btn" onclick="showMainView()">← Back to Home</button>
+        <div class="details-container">
+            <div class="details-poster">
+                <img id="details-image" src="" alt="Movie Poster">
+            </div>
+            <div class="details-info">
+                <h2 id="details-title">Movie Title</h2>
+                <div class="details-meta">
+                    <span id="details-category">Category</span>
+                    <span>•</span>
+                    <span>Rating: 8.5/10</span>
+                    <span>•</span>
+                    <span>2024</span>
+                </div>
+                <div class="item-tags" id="details-tags" style="margin-bottom: 2rem;">
+                    <!-- Tags -->
+                </div>
+                <h3>Overview</h3>
+                <p id="details-description" class="details-description">
+                    Movie description will appear here.
+                </p>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="details-watched-btn" class="btn btn-primary">Mark as Watched</button>
+                    <button class="btn btn-secondary">Watch Trailer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <footer class="app-footer" role="contentinfo">
         <div class="container">
-            <p>Built with FastAPI, Qdrant, Upstash, and Vanilla JS.</p>
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div class="logo-section">
+                        <h1><span>Cine</span>Sphere</h1>
+                    </div>
+                    <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.875rem;">
+                        Your ultimate destination for premium movie recommendations.
+                    </p>
+                </div>
+                <div class="footer-col">
+                    <h4>Navigation</h4>
+                    <ul>
+                        <li><a href="#" onclick="showMainView()">Home</a></li>
+                        <li><a href="#catalog-section">Movies</a></li>
+                        <li><a href="#genres-section">Genres</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Connect</h4>
+                    <ul>
+                        <li><a href="#">Twitter</a></li>
+                        <li><a href="#">Instagram</a></li>
+                        <li><a href="#">Facebook</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 CineSphere. Built with FastAPI, Qdrant, and Vanilla JS.</p>
+            </div>
         </div>
     </footer>
 

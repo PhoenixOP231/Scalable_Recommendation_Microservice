@@ -15,8 +15,45 @@ const toastContainer = document.getElementById('toast-container');
 let abortController = null;
 let debounceTimer = null;
 let catalogData = [];
+let filteredCatalogData = [];
 let currentPage = 1;
 const itemsPerPage = 12;
+
+// Routing Functions
+window.showMainView = () => {
+    document.getElementById('main-view').classList.remove('hidden');
+    document.getElementById('details-view').classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.showDetailsView = (item) => {
+    document.getElementById('main-view').classList.add('hidden');
+    document.getElementById('details-view').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Populate Details
+    document.getElementById('details-title').textContent = item.title;
+    document.getElementById('details-category').textContent = item.category || 'Genre Unspecified';
+    document.getElementById('details-description').textContent = item.description || 'No overview available for this movie.';
+    
+    const detailsImage = document.getElementById('details-image');
+    if (item.image_url) {
+        detailsImage.src = item.image_url;
+        detailsImage.style.display = 'block';
+    } else {
+        detailsImage.src = '';
+        detailsImage.style.display = 'none';
+    }
+
+    const tagsContainer = document.getElementById('details-tags');
+    tagsContainer.innerHTML = (item.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('');
+
+    // Setup action button
+    const watchedBtn = document.getElementById('details-watched-btn');
+    watchedBtn.onclick = () => {
+        handleInteraction(item.item_id, 'purchase');
+    };
+};
 
 const createSkeleton = () => {
     const el = document.createElement('div');
@@ -47,7 +84,7 @@ const createItemCard = (item, isRecommendation = false) => {
         </div>
         <div class="interaction-actions">
             <button class="btn btn-secondary action-view" aria-label="View Details for ${item.title}">Details</button>
-            <button class="btn btn-primary action-buy" aria-label="Simulate Watch of ${item.title}">Watch (Demo)</button>
+            <button class="btn btn-primary action-buy" aria-label="Mark ${item.title} as Watched">Watched</button>
         </div>
     `;
 
@@ -55,8 +92,18 @@ const createItemCard = (item, isRecommendation = false) => {
     const viewBtn = card.querySelector('.action-view');
     const buyBtn = card.querySelector('.action-buy');
 
-    viewBtn.addEventListener('click', () => handleInteraction(item.item_id, 'view'));
-    buyBtn.addEventListener('click', () => handleInteraction(item.item_id, 'purchase'));
+    viewBtn.addEventListener('click', () => {
+        handleInteraction(item.item_id, 'view');
+        window.showDetailsView(item);
+    });
+    
+    buyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Optional: you can change the button text to show it was clicked
+        buyBtn.textContent = 'Watched ✓';
+        buyBtn.style.opacity = '0.7';
+        handleInteraction(item.item_id, 'purchase');
+    });
 
     return card;
 };
@@ -110,7 +157,7 @@ const renderCatalogPage = (page) => {
     
     const pagination = document.getElementById('catalog-pagination');
     
-    if (catalogData.length === 0) {
+    if (filteredCatalogData.length === 0) {
         catalogEmpty.classList.remove('hidden');
         if (pagination) pagination.classList.add('hidden');
         return;
@@ -121,20 +168,20 @@ const renderCatalogPage = (page) => {
     
     const startIndex = (page - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const pageItems = catalogData.slice(startIndex, endIndex);
+    const pageItems = filteredCatalogData.slice(startIndex, endIndex);
     
     pageItems.forEach(item => {
         catalogGrid.appendChild(createItemCard(item));
     });
     
-    const totalPages = Math.ceil(catalogData.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredCatalogData.length / itemsPerPage);
     const indicator = document.getElementById('page-indicator');
     const prevBtn = document.getElementById('prev-page-btn');
     const nextBtn = document.getElementById('next-page-btn');
     
     if (indicator) indicator.textContent = `Page ${page} of ${totalPages}`;
     if (prevBtn) prevBtn.disabled = page === 1;
-    if (nextBtn) nextBtn.disabled = endIndex >= catalogData.length;
+    if (nextBtn) nextBtn.disabled = endIndex >= filteredCatalogData.length;
 };
 
 const fetchCatalog = async () => {
@@ -147,6 +194,7 @@ const fetchCatalog = async () => {
         
         const data = await res.json();
         catalogData = data.items || [];
+        filteredCatalogData = [...catalogData];
         
         renderCatalogPage(1);
         announce('Catalog loaded successfully.');
@@ -246,7 +294,23 @@ const resetSession = async () => {
 
 // Event Listeners
 retryBtn.addEventListener('click', fetchCatalog);
-resetBtn.addEventListener('click', resetSession);
+if (resetBtn) resetBtn.addEventListener('click', resetSession);
+
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        if (!query) {
+            filteredCatalogData = [...catalogData];
+        } else {
+            filteredCatalogData = catalogData.filter(item => 
+                (item.title && item.title.toLowerCase().includes(query)) ||
+                (item.category && item.category.toLowerCase().includes(query))
+            );
+        }
+        renderCatalogPage(1);
+    });
+}
 
 const prevBtn = document.getElementById('prev-page-btn');
 const nextBtn = document.getElementById('next-page-btn');
@@ -257,7 +321,7 @@ if (prevBtn) {
 }
 if (nextBtn) {
     nextBtn.addEventListener('click', () => {
-        if (currentPage * itemsPerPage < catalogData.length) renderCatalogPage(currentPage + 1);
+        if (currentPage * itemsPerPage < filteredCatalogData.length) renderCatalogPage(currentPage + 1);
     });
 }
 
