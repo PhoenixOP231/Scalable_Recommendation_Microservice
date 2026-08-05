@@ -14,6 +14,9 @@ const toastContainer = document.getElementById('toast-container');
 // State
 let abortController = null;
 let debounceTimer = null;
+let catalogData = [];
+let currentPage = 1;
+const itemsPerPage = 12;
 
 const createSkeleton = () => {
     const el = document.createElement('div');
@@ -101,6 +104,39 @@ const showError = (show) => {
     }
 };
 
+const renderCatalogPage = (page) => {
+    currentPage = page;
+    catalogGrid.innerHTML = '';
+    
+    const pagination = document.getElementById('catalog-pagination');
+    
+    if (catalogData.length === 0) {
+        catalogEmpty.classList.remove('hidden');
+        if (pagination) pagination.classList.add('hidden');
+        return;
+    }
+    
+    catalogEmpty.classList.add('hidden');
+    if (pagination) pagination.classList.remove('hidden');
+    
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageItems = catalogData.slice(startIndex, endIndex);
+    
+    pageItems.forEach(item => {
+        catalogGrid.appendChild(createItemCard(item));
+    });
+    
+    const totalPages = Math.ceil(catalogData.length / itemsPerPage);
+    const indicator = document.getElementById('page-indicator');
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+    
+    if (indicator) indicator.textContent = `Page ${page} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = page === 1;
+    if (nextBtn) nextBtn.disabled = endIndex >= catalogData.length;
+};
+
 const fetchCatalog = async () => {
     try {
         catalogGrid.innerHTML = '';
@@ -110,17 +146,10 @@ const fetchCatalog = async () => {
         if (!res.ok) throw new Error('Failed to fetch catalog');
         
         const data = await res.json();
-        catalogGrid.innerHTML = '';
+        catalogData = data.items || [];
         
-        if (!data.items || data.items.length === 0) {
-            catalogEmpty.classList.remove('hidden');
-        } else {
-            catalogEmpty.classList.add('hidden');
-            data.items.forEach(item => {
-                catalogGrid.appendChild(createItemCard(item));
-            });
-            announce('Catalog loaded successfully.');
-        }
+        renderCatalogPage(1);
+        announce('Catalog loaded successfully.');
         showError(false);
     } catch (error) {
         console.error(error);
@@ -218,6 +247,19 @@ const resetSession = async () => {
 // Event Listeners
 retryBtn.addEventListener('click', fetchCatalog);
 resetBtn.addEventListener('click', resetSession);
+
+const prevBtn = document.getElementById('prev-page-btn');
+const nextBtn = document.getElementById('next-page-btn');
+if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) renderCatalogPage(currentPage - 1);
+    });
+}
+if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+        if (currentPage * itemsPerPage < catalogData.length) renderCatalogPage(currentPage + 1);
+    });
+}
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {

@@ -56,7 +56,7 @@ async def get_demo_catalog(
     vector_repo: VectorRepository = Depends(get_vector_repo)
 ):
     try:
-        items = await vector_repo.get_catalog(limit=50)
+        items = await vector_repo.get_catalog(limit=300)
         # Filter only safe fields
         safe_items = []
         for item in items:
